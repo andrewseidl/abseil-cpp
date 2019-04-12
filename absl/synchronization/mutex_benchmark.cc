@@ -13,7 +13,8 @@
 // limitations under the License.
 
 #include <cstdint>
-#include <mutex>  // NOLINT(build/c++11)
+#include <shared_mutex>  // NOLINT(build/c++14)
+#include <type_traits>
 #include <vector>
 
 #include "absl/base/internal/cycleclock.h"
@@ -23,6 +24,8 @@
 #include "absl/synchronization/mutex.h"
 #include "benchmark/benchmark.h"
 
+#include <folly/SharedMutex.h>
+#include <boost/thread/shared_mutex.hpp>
 namespace {
 
 void BM_Mutex(benchmark::State& state) {
@@ -47,17 +50,49 @@ class RaiiLocker {
  public:
   explicit RaiiLocker(MutexType* mu) : mu_(mu) { mu_->Lock(); }
   ~RaiiLocker() { mu_->Unlock(); }
+
  private:
   MutexType* mu_;
 };
 
 template <>
-class RaiiLocker<std::mutex> {
+class RaiiLocker<std::shared_mutex> {
  public:
-  explicit RaiiLocker(std::mutex* mu) : mu_(mu) { mu_->lock(); }
+  explicit RaiiLocker(std::shared_mutex* mu) : mu_(mu) { mu_->lock(); }
   ~RaiiLocker() { mu_->unlock(); }
+
  private:
-  std::mutex* mu_;
+  std::shared_mutex* mu_;
+};
+
+template <>
+class RaiiLocker<std::shared_timed_mutex> {
+ public:
+  explicit RaiiLocker(std::shared_timed_mutex* mu) : mu_(mu) { mu_->lock(); }
+  ~RaiiLocker() { mu_->unlock(); }
+
+ private:
+  std::shared_timed_mutex* mu_;
+};
+
+template <>
+class RaiiLocker<folly::SharedMutex> {
+ public:
+  explicit RaiiLocker(folly::SharedMutex* mu) : mu_(mu) { mu_->lock(); }
+  ~RaiiLocker() { mu_->unlock(); }
+
+ private:
+  folly::SharedMutex* mu_;
+};
+
+template <>
+class RaiiLocker<boost::shared_mutex> {
+ public:
+  explicit RaiiLocker(boost::shared_mutex* mu) : mu_(mu) { mu_->lock(); }
+  ~RaiiLocker() { mu_->unlock(); }
+
+ private:
+  boost::shared_mutex* mu_;
 };
 
 template <typename MutexType>
@@ -135,7 +170,82 @@ BENCHMARK_TEMPLATE(BM_Contended, absl::base_internal::SpinLock)
     ->Arg(50)
     ->Arg(200);
 
-BENCHMARK_TEMPLATE(BM_Contended, std::mutex)
+BENCHMARK_TEMPLATE(BM_Contended, std::shared_mutex)
+    ->UseRealTime()
+    // ThreadPerCpu poorly handles non-power-of-two CPU counts.
+    ->Threads(1)
+    ->Threads(2)
+    ->Threads(4)
+    ->Threads(6)
+    ->Threads(8)
+    ->Threads(12)
+    ->Threads(16)
+    ->Threads(24)
+    ->Threads(32)
+    ->Threads(48)
+    ->Threads(64)
+    ->Threads(96)
+    ->Threads(128)
+    ->Threads(192)
+    ->Threads(256)
+    // Some empirically chosen amounts of work in critical section.
+    // 1 is low contention, 200 is high contention and few values in between.
+    ->Arg(1)
+    ->Arg(20)
+    ->Arg(50)
+    ->Arg(200);
+
+BENCHMARK_TEMPLATE(BM_Contended, std::shared_timed_mutex)
+    ->UseRealTime()
+    // ThreadPerCpu poorly handles non-power-of-two CPU counts.
+    ->Threads(1)
+    ->Threads(2)
+    ->Threads(4)
+    ->Threads(6)
+    ->Threads(8)
+    ->Threads(12)
+    ->Threads(16)
+    ->Threads(24)
+    ->Threads(32)
+    ->Threads(48)
+    ->Threads(64)
+    ->Threads(96)
+    ->Threads(128)
+    ->Threads(192)
+    ->Threads(256)
+    // Some empirically chosen amounts of work in critical section.
+    // 1 is low contention, 200 is high contention and few values in between.
+    ->Arg(1)
+    ->Arg(20)
+    ->Arg(50)
+    ->Arg(200);
+
+BENCHMARK_TEMPLATE(BM_Contended, folly::SharedMutex)
+    ->UseRealTime()
+    // ThreadPerCpu poorly handles non-power-of-two CPU counts.
+    ->Threads(1)
+    ->Threads(2)
+    ->Threads(4)
+    ->Threads(6)
+    ->Threads(8)
+    ->Threads(12)
+    ->Threads(16)
+    ->Threads(24)
+    ->Threads(32)
+    ->Threads(48)
+    ->Threads(64)
+    ->Threads(96)
+    ->Threads(128)
+    ->Threads(192)
+    ->Threads(256)
+    // Some empirically chosen amounts of work in critical section.
+    // 1 is low contention, 200 is high contention and few values in between.
+    ->Arg(1)
+    ->Arg(20)
+    ->Arg(50)
+    ->Arg(200);
+
+BENCHMARK_TEMPLATE(BM_Contended, boost::shared_mutex)
     ->UseRealTime()
     // ThreadPerCpu poorly handles non-power-of-two CPU counts.
     ->Threads(1)

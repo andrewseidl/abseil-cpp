@@ -1,0 +1,40 @@
+cc_import(
+    name = "folly",
+    static_library = "libfolly.a",
+    visibility = ["//visibility:public"],
+)
+cc_import(
+    name = "dc",
+    shared_library = "libdouble-conversion.so",
+    visibility = ["//visibility:public"],
+)
+cc_import(
+    name = "dl",
+    shared_library = "libdl.so",
+    visibility = ["//visibility:public"],
+)
+cc_import(
+    name = "glog",
+    static_library = "libglog.a",
+    visibility = ["//visibility:public"],
+)
+cc_import(
+    name = "gflags",
+    shared_library = "libgflags.so",
+    visibility = ["//visibility:public"],
+)
+cc_import(
+    name = "boost_regex",
+    shared_library = "libboost_regex.so",
+    visibility = ["//visibility:public"],
+)
+cc_import(
+    name = "boost_thread",
+    shared_library = "libboost_thread.so",
+    visibility = ["//visibility:public"],
+)
+cc_import(
+    name = "iberty",
+    static_library = "libiberty.a",
+    visibility = ["//visibility:public"],
+)
